@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 
@@ -22,17 +23,34 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ storage: storage });
-
-// Servir archivos estáticos
-app.use(express.static('public'));
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }  // Limite de 5 MB
+});
 
 // Ruta para subir una imagen
-app.post('/upload', upload.single('image'), (req, res) => {
+app.post('/upload', upload.single('image'), async (req, res) => {
     if (!req.file) {
         return res.status(400).send('No file uploaded');
     }
-    res.json({ imagePath: `/uploads/${req.file.filename}` });
+
+    try {
+        const filePath = path.join(uploadDir, req.file.filename);
+        const maxSize = 1024;  // Redimensionar la imagen para que no supere 1024px de ancho
+
+        // Redimensionar la imagen si es más grande que el tamaño máximo
+        await sharp(filePath)
+            .resize(maxSize, maxSize, { fit: 'inside' })  // Mantener la imagen proporcional
+            .toFile(path.join(uploadDir, 'resized_' + req.file.filename));  // Guardar la imagen redimensionada
+
+        // Eliminar la imagen original si se redimensionó
+        fs.unlinkSync(filePath);
+
+        res.json({ imagePath: `/uploads/resized_${req.file.filename}` });
+    } catch (err) {
+        console.error('Error al procesar la imagen:', err);
+        res.status(500).send('Error al procesar la imagen');
+    }
 });
 
 // Ruta para obtener las imágenes subidas
@@ -41,12 +59,16 @@ app.get('/images', (req, res) => {
         if (err) {
             return res.status(500).send('Error reading directory');
         }
-        const images = files.map(file => `/uploads/${file}`);
+        const images = files.filter(file => file.startsWith('resized_')).map(file => `/uploads/${file}`);
         res.json(images);
     });
 });
+
+// Servir archivos estáticos
+app.use(express.static('public'));
 
 // Iniciar el servidor
 app.listen(port, () => {
     console.log(`Servidor corriendo en http://localhost:${port}`);
 });
+
