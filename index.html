@@ -1,38 +1,63 @@
-const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subir Imágenes</title>
+</head>
+<body>
+    <h1>Sube una imagen</h1>
 
-const app = express();
-const PORT = 3000;
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*" required>
+        <button type="submit">Subir Imagen</button>
+    </form>
 
-// Configuración de multer para subir archivos
-const upload = multer({ dest: 'uploads/' });
+    <h2>Imágenes subidas:</h2>
+    <div id="imageGallery"></div>
 
-// Servir archivos estáticos
-app.use(express.static('public'));
-app.use('/uploads', express.static('uploads'));
+    <script>
+        const uploadForm = document.getElementById('uploadForm');
+        const imageGallery = document.getElementById('imageGallery');
 
-// Ruta para subir imágenes
-app.post('/upload', upload.single('file'), (req, res) => {
-    const tempPath = req.file.path;
-    const targetPath = path.join(__dirname, 'uploads', req.file.originalname);
+        // Función para mostrar las imágenes subidas
+        function loadImages() {
+            fetch('/images')
+                .then(response => response.json())
+                .then(images => {
+                    imageGallery.innerHTML = '';
+                    images.forEach(image => {
+                        const img = document.createElement('img');
+                        img.src = image;
+                        img.style.width = '200px';
+                        img.style.margin = '10px';
+                        imageGallery.appendChild(img);
+                    });
+                });
+        }
 
-    fs.rename(tempPath, targetPath, err => {
-        if (err) return res.sendStatus(500);
-        res.sendStatus(200);
-    });
-});
+        // Cargar las imágenes al cargar la página
+        loadImages();
 
-// Ruta para obtener la lista de imágenes
-app.get('/images', (req, res) => {
-    fs.readdir('uploads', (err, files) => {
-        if (err) return res.sendStatus(500);
-        res.json(files);
-    });
-});
+        // Manejar el envío del formulario
+        uploadForm.addEventListener('submit', (e) => {
+            e.preventDefault();
 
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-});
+            const formData = new FormData(uploadForm);
 
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Cargar la lista de imágenes después de subir una nueva
+                loadImages();
+            })
+            .catch(error => {
+                console.error('Error al subir la imagen:', error);
+            });
+        });
+    </script>
+</body>
+</html>
