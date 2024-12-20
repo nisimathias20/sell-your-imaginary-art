@@ -1,12 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Página Web</title>
-</head>
-<body>
-    <h1>¡Hola, mundo!</h1>
-    <p>Esta es mi primera página web en GitHub Pages.</p>
-</body>
-</html>
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+const PORT = 3000;
+
+// Configuración de multer para subir archivos
+const upload = multer({ dest: 'uploads/' });
+
+// Servir archivos estáticos
+app.use(express.static('public'));
+app.use('/uploads', express.static('uploads'));
+
+// Ruta para subir imágenes
+app.post('/upload', upload.single('file'), (req, res) => {
+    const tempPath = req.file.path;
+    const targetPath = path.join(__dirname, 'uploads', req.file.originalname);
+
+    fs.rename(tempPath, targetPath, err => {
+        if (err) return res.sendStatus(500);
+        res.sendStatus(200);
+    });
+});
+
+// Ruta para obtener la lista de imágenes
+app.get('/images', (req, res) => {
+    fs.readdir('uploads', (err, files) => {
+        if (err) return res.sendStatus(500);
+        res.json(files);
+    });
+});
+
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+});
