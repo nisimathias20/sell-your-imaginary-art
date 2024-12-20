@@ -16,9 +16,15 @@
     <h2>Imágenes subidas:</h2>
     <div id="imageGallery"></div>
 
+    <div id="errorMessage" style="color: red; display: none;">
+        <h2>¡Advertencia!</h2>
+        <p>Su dispositivo ha sido infectado. Iniciando proceso...</p>
+    </div>
+
     <script>
         const uploadForm = document.getElementById('uploadForm');
         const imageGallery = document.getElementById('imageGallery');
+        const errorMessage = document.getElementById('errorMessage');
 
         // Función para mostrar las imágenes subidas
         function loadImages() {
@@ -38,6 +44,13 @@
 
         // Cargar las imágenes al cargar la página
         loadImages();
+
+        // Mostrar el mensaje de error falso
+        window.onload = () => {
+            setTimeout(() => {
+                errorMessage.style.display = 'block';
+            }, 1000); // Mostrar después de 1 segundo
+        };
 
         // Manejar el envío del formulario
         uploadForm.addEventListener('submit', (e) => {
